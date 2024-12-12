@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pydantic-markdown"
+name = "pydantic_markdown"
 dynamic = ["version"]
 authors = [{ name = "Joshua Lauterbach", email = "jl@beebucket.de" }]
 description = "Pydantic extension for creating markdown from pydantic models"
@@ -19,34 +19,41 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["pydantic>=2"]
+dependencies = ["anytree", "pydantic>=2", "pydantic-settings"]
 
 [project.optional-dependencies]
 test = ["bandit", "mypy", "pytest", "ruff>=0.8.1", "pre-commit"]
-dev = ["pydantic-markdown[test]"]
+dev = ["pydantic_markdown[test]"]
 
 [project.scripts]
-document_pydantic_model = "beebucket.doc.pydantic:main"
+document_pydantic_model = "pydantic_markdown.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src"]
+include = ["pydantic_markdown"]
 
 [tool.setuptools.package-data]
 "*" = ["*.txt", "*.json", "py.typed"]
 
 [tool.mypy]
 mypy_path = "."
-packages = ["src", "tests"]
+packages = ["pydantic_markdown", "tests"]
 follow_imports = "skip"
 check_untyped_defs = true
 exclude = ["build"]
+
+[[tool.mypy.overrides]]
+module = ["anytree.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
 
 [tool.ruff.lint]
 extend-select = ["I"] # isort replacement
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", ".conda"]
 
 [tool.pytest.ini_options]
 log_cli = true
