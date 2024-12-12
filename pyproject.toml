@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pydantic-markdown"
+dynamic = ["version"]
+authors = [{ name = "Joshua Lauterbach", email = "jl@beebucket.de" }]
+description = "Pydantic extension for creating markdown from pydantic models"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = ["pydantic>=2"]
+
+[project.optional-dependencies]
+test = ["bandit", "mypy", "pytest", "ruff>=0.8.1", "pre-commit"]
+dev = ["pydantic-markdown[test]"]
+
+[project.scripts]
+document_pydantic_model = "beebucket.doc.pydantic:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.json", "py.typed"]
+
+[tool.mypy]
+mypy_path = "."
+packages = ["src", "tests"]
+follow_imports = "skip"
+check_untyped_defs = true
+exclude = ["build"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["I"] # isort replacement
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "WARNING"
+filterwarnings = ["error"]
+# This is the filter pattern for warnings: action:message:category:module:lineno
+# Only ever add warnings that are caused by non-upgradable dependencies. If its
+# our code, fix it!

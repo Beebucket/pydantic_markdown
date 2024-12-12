@@ -1,0 +1,47 @@
+name: Unit Tests and Linters
+
+on: ["pull_request", "workflow_call"]
+
+jobs:
+    linter:
+        runs-on: ubuntu-24.04
+        name: Linters
+        steps:
+        -   uses: actions/checkout@v4
+            with:
+                lfs: true
+        -   uses: actions/setup-python@v5
+            with:
+                python-version: 3.12
+                cache: "pip"
+        -   name: Install
+            run: pip install .[test]
+        -   name: mypy
+            run: mypy .
+        -   name: ruff check
+            run: ruff check --output-format=github .
+        -   name: run format
+            run: ruff format --check .
+        -   name: bandit
+            run: bandit -c pyproject.toml .
+
+    unit-tests:
+        runs-on: ubuntu-24.04
+        strategy:
+            matrix:
+                PYTHON_VERSION: ["3.9", "3.10", "3.11", "3.12"]
+        name: Perform unit tests for ${{ matrix.PYTHON_VERSION }}
+        steps:
+        -   uses: actions/checkout@v4
+            with:
+                lfs: true
+        -   uses: actions/setup-python@v5
+            with:
+                python-version: ${{ matrix.PYTHON_VERSION }}
+                cache: "pip"
+        -   name: Install
+            run: |
+                pip install .[test]
+        -   name: Execute tests
+            run: |
+                pytest .

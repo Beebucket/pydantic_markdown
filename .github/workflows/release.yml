@@ -1,0 +1,27 @@
+name: Release
+
+on:
+    push:
+        tags: "*"
+
+jobs:
+    quick_checks:
+        uses: ./.github/workflows/quick_checks.yml
+    create_release:
+        runs-on: ubuntu-24.04
+        name: Create Release
+        needs:
+        -   quick_checks
+        steps:
+        -   uses: actions/checkout@v4
+        -   uses: OpenAstronomy/build-python-dist@v1
+            with:
+                test_command: pytest
+                pure_python_wheel: true
+        -   name: Release
+            uses: softprops/action-gh-release@v2
+            with:
+                files: "*.whl"
+                fail_on_unmatched_files: true
+                draft: true
+                generate_release_notes: true
