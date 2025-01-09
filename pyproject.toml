@@ -32,6 +32,9 @@ document_pydantic_model = "pydantic_markdown.cli:main"
 where = ["."]
 include = ["pydantic_markdown"]
 
+[tool.setuptools.dynamic]
+version = { file = "dist/VERSION.txt" }
+
 [tool.setuptools.package-data]
 "*" = ["*.txt", "*.json", "py.typed"]
 

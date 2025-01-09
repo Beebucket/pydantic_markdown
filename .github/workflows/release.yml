@@ -12,16 +12,21 @@ jobs:
         name: Create Release
         needs:
         -   quick_checks
+        env:
+            DISTRIBUTION_DIR: "${{ github.workspace }}/dist"
+            VERSION: "${{ github.ref_name }}"
         steps:
         -   uses: actions/checkout@v4
-        -   uses: OpenAstronomy/build-python-dist@v1
+        -   uses: actions/setup-python@v5
             with:
-                test_command: pytest
-                pure_python_wheel: true
+                python-version: 3.12
+                cache: 'pip'
+        -   name: Build Wheel
+            run: /bin/bash ${{ github.workspace}}/scripts/build_wheel.sh
         -   name: Release
             uses: softprops/action-gh-release@v2
             with:
-                files: "*.whl"
+                files: "${{ env.DISTRIBUTION_DIR }}/pydantic_markdown*.whl"
                 fail_on_unmatched_files: true
                 draft: true
                 generate_release_notes: true
