@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from enum import Enum
 from logging import getLogger
-from typing import Any, Dict, Literal, Optional, Type, Union, get_origin
+from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type, Union, get_origin
 from typing import get_args as get_generic_args
 from warnings import warn
 
@@ -53,6 +53,21 @@ class TypeReferenceMap(dict):
 
     def __missing__(self, type_hint):
         raise MissingReferenceError(type_hint)
+
+
+class CustomAnnotation(ABC):
+    """This is the interface for non static custom type annotations.
+
+    Inherit this and implement the magic functions to create a struct that you can annotate
+    types with. That way, pydantic_markdown will be able to create markdown documentation for
+    a given type.
+    """
+
+    @abstractmethod
+    def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str: ...
+
+    @abstractmethod
+    def __print_pydantic_markdown__(self, references: TypeReferenceMap, writer: MarkdownWriter) -> None: ...
 
 
 class Step(ABC):
@@ -282,6 +297,10 @@ class LiteralStep(GenericStep):
         return get_origin(type_hint) is Literal
 
 
+ReferenceGetter = Callable[[TypeReferenceMap], str]
+PrintFunction = Callable[[TypeReferenceMap, MarkdownWriter], None]
+
+
 class FieldInfoStep(Step):
     """This step represents how to document a pydantic FieldInfo.
 
@@ -290,23 +309,34 @@ class FieldInfoStep(Step):
 
     def __init__(self, type_hint: FieldInfo):
         super().__init__(type_hint)
-        if len(type_hint.metadata) != 0:
-            message = "Metadata (e.g. annotations) on pydantic fields are currently ignored."
-            warn(message, NotImplementedWarning)
-            _logger.warning(message)
+
         if type_hint.annotation is None:
             raise RuntimeError("Empty type annotation in type hint")
-        self._inner_step = create_step(type_hint.annotation)
+
+        self._reference_getter, self._printer = FieldInfoStep._get_interface_functions(type_hint)
 
     def get_reference(self, type_references: TypeReferenceMap) -> str:
-        return self._inner_step.get_reference(type_references)
+        return self._reference_getter(type_references)
 
     def print(self, type_references: TypeReferenceMap, writer: MarkdownWriter) -> None:
-        return self._inner_step.print(type_references, writer)
+        return self._printer(type_references, writer)
 
     @classmethod
     def covers(cls, type_hint: Any) -> bool:
         return isinstance(type_hint, FieldInfo)
+
+    @staticmethod
+    def _get_interface_functions(type_hint: FieldInfo) -> Tuple[ReferenceGetter, PrintFunction]:
+        markdown_annotations = [
+            annotation for annotation in type_hint.metadata if isinstance(annotation, CustomAnnotation)
+        ]
+        # No matching annotations, just use the underlying types implementation
+        if len(markdown_annotations) == 0:
+            inner_step = create_step(type_hint.annotation)
+            return inner_step.get_reference, inner_step.print
+        if len(markdown_annotations) != 1:
+            raise RuntimeError("Too many pydantic markdown CustomAnnotations. You must only use one per type!")
+        return markdown_annotations[0].__get_pydantic_reference__, markdown_annotations[0].__print_pydantic_markdown__
 
 
 _POSSIBLE_STEPS = (
