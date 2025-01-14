@@ -7,7 +7,7 @@ from pydantic import AnyUrl, BaseModel, Field
 from pytest import warns
 
 from pydantic_markdown.steps import ClassDocstringMissingWarning, FieldDescriptionMissingWarning
-from pydantic_markdown.writer import Config, _document_model, _import_class
+from pydantic_markdown.writer import Configuration, _document_model, _import_class
 
 
 class IntEnumeration(Enum):
@@ -72,19 +72,19 @@ def test_import_class():
 
 
 def test_missing_enum_docstring(output_dir):
-    config = Config(model=_get_id(ModelMissingEnumDocstring), output=output_dir)
+    config = Configuration(model=_get_id(ModelMissingEnumDocstring), output=output_dir)
     with warns(ClassDocstringMissingWarning):
         _document_model(config)
 
 
 def test_missing_field_description(output_dir):
-    config = Config(model=_get_id(ModelWithUndescribedMembers), output=output_dir)
+    config = Configuration(model=_get_id(ModelWithUndescribedMembers), output=output_dir)
     with warns(FieldDescriptionMissingWarning):
         _document_model(config)
 
 
 def test_document_model(output_dir):
-    config = Config(
+    config = Configuration(
         model=_get_id(CompleteClass),
         output=output_dir / "models.md",
     )
@@ -92,7 +92,7 @@ def test_document_model(output_dir):
 
 
 def test_incomplete_model_raises(output_dir):
-    config = Config(
+    config = Configuration(
         model=_get_id(ModelWithoutDocstring),
         output=output_dir,
     )
@@ -101,7 +101,7 @@ def test_incomplete_model_raises(output_dir):
 
 
 def test_incomplete_model_without_strict(output_dir):
-    config = Config(
+    config = Configuration(
         model=_get_id(ModelWithoutDocstring),
         output=output_dir,
     )

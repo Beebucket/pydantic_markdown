@@ -16,14 +16,16 @@ from pydantic_markdown.tree import TypeNode
 _logger = getLogger(__name__)
 
 
-class Config(BaseSettings):
+class Configuration(BaseSettings):
+    """Configuration of the pydantic_markdown tool."""
+
     model: str = Field(description="Complete identifier of the pydantic.BaseModel to document, including module.")
     output: Path = Field(
         default=Path(".models.md"), description='Path to store the markdown file in. Defaults to "./models.md"'
     )
 
 
-class CliConfig(Config):
+class CliConfig(Configuration):
     model_config = SettingsConfigDict(cli_parse_args=True)
 
 
@@ -93,7 +95,7 @@ class Writer:
         return True
 
 
-def _document_model(config: Config):
+def _document_model(config: Configuration):
     if config.output.is_dir():
         config.output /= "models.md"
 
