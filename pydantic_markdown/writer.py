@@ -31,17 +31,18 @@ class CliConfig(Configuration):
 
 def _import_class(path: str) -> Any:
     components = path.rsplit(".", 1)
-    module: Union[ModuleType, Type] = import_module(components[0])
+    module_id = components[0]
+    module: Union[ModuleType, Type] = import_module(module_id)
+    class_id = components[1]
     try:
-        class_to_import = getattr(module, components[1])
-    except AttributeError:
-        _logger.error(
-            '"%s" not in %s. The following attributes are available:\n\t%s',
-            components[1],
-            module,
-            "\n\t".join(module.__dict__),
-        )
-    return class_to_import
+        return getattr(module, class_id)
+    except AttributeError as error:
+        available_attributes_text = "\n\t".join(module.__dict__)
+        raise ImportError(
+            f'"{class_id}" not in "{module_id}". The following attributes are available:\n\t{available_attributes_text}',
+            class_id,
+            path=path,
+        ) from error
 
 
 class Writer:
