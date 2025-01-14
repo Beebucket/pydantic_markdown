@@ -26,6 +26,33 @@ Configuration of the pydantic_markdown tool.
 | model | String | Yes |   | Complete identifier of the pydantic.BaseModel to document, including module. |
 | output | File Path | No | .models.md | Path to store the markdown file in. Defaults to "./models.md" |
 
+## Custom Type Annotations
+
+The currently supported types are by no means complete. This repository shall only contain
+pydantic and built in types. Never the less, there is a plugin interface through annotations.
+That way non natively pydantic supported types can be made to support this library.
+
+For overloading the recursion function of a type, just inherit the annotation interface and
+annotate the type with it:
+
+```python
+from pydantic_markdown import CustomAnnotation
+
+
+class CustomIntAnnotation(CustomAnnotation):
+    def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str:
+        return "My annotated Number Type"
+
+    def __print_pydantic_markdown__(self, references: TypeReferenceMap, writer: MarkdownWriter) -> None:
+        writer.print_header(self.__get_pydantic_reference__(references), 0)
+        writer.print_description(description="This is the very best custom annotated integer!")
+
+
+AnnotatedInt = Annotated[int, CustomIntAnnotation()]
+```
+
+This way, the default implementation for documenting integers will be overwritten with the results from ```__get_pydantic_reference__``` and ```__print_pydantic_markdown__```.
+
 # Developer Info
 
 ## Releasing

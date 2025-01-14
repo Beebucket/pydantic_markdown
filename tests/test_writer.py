@@ -2,13 +2,19 @@ from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 from subprocess import PIPE, run
-from typing import Dict, List, Literal, Mapping, Optional, Set, Tuple, Type
+from typing import Annotated, Dict, List, Literal, Mapping, Optional, Set, Tuple, Type
 
 from pydantic import AnyUrl, BaseModel, Field
 from pytest import fixture, raises, warns
 
-from pydantic_markdown.steps import ClassDocstringMissingWarning, FieldDescriptionMissingWarning
-from pydantic_markdown.writer import Configuration, _import_class, document_model
+from pydantic_markdown import CustomAnnotation, document_model
+from pydantic_markdown.io import MarkdownWriter
+from pydantic_markdown.steps import (
+    ClassDocstringMissingWarning,
+    FieldDescriptionMissingWarning,
+    TypeReferenceMap,
+)
+from pydantic_markdown.writer import Configuration, _import_class
 
 
 class IntEnumeration(Enum):
@@ -73,6 +79,24 @@ def output_io(output_dir):
         yield file
 
 
+class CustomIntAnnotation(CustomAnnotation):
+    def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str:
+        return "My annotated Number Type"
+
+    def __print_pydantic_markdown__(self, references: TypeReferenceMap, writer: MarkdownWriter) -> None:
+        writer.print_header(self.__get_pydantic_reference__(references), 0)
+        writer.print_description(description="This is the very best custom annotated integer!")
+
+
+AnnotatedInt = Annotated[int, CustomIntAnnotation()]
+
+
+class ModelWithAnnotatedInt(BaseModel):
+    """This model has a custom annotated int."""
+
+    annotated_int: AnnotatedInt = Field(description="I am an annotated int.")
+
+
 def test_import_class():
     hopefully_path_class = _import_class(_get_id(Path))
     assert hopefully_path_class is Path
@@ -110,6 +134,10 @@ def test_incomplete_model_raises(output_io):
 def test_incomplete_model_without_strict(output_io):
     with warns(ClassDocstringMissingWarning):
         document_model(output_io, ModelWithoutDocstring)
+
+
+def test_custom_pydantic_annotated(output_io):
+    document_model(output_io, ModelWithAnnotatedInt)
 
 
 def test_cli(output_dir):
