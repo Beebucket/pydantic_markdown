@@ -1,6 +1,7 @@
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
+from subprocess import PIPE, run
 from typing import Dict, List, Literal, Mapping, Optional, Set, Tuple, Type
 
 from pydantic import AnyUrl, BaseModel, Field
@@ -117,6 +118,15 @@ def test_incomplete_model_without_strict(output_dir):
     )
     with warns(ClassDocstringMissingWarning):
         _document_model(config)
+
+
+def test_cli(output_dir):
+    completed_process = run(
+        ["pydantic_markdown", "--model", _get_id(Configuration), "--output", output_dir],
+        check=False,
+        stderr=PIPE,
+    )
+    assert completed_process.returncode == 0, completed_process.stderr.decode()
 
 
 def _get_id(model: Type) -> str:
