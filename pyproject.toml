@@ -26,7 +26,7 @@ test = ["bandit", "mypy", "pytest", "ruff>=0.8.1", "pre-commit"]
 dev = ["pydantic_markdown[test]"]
 
 [project.scripts]
-document_pydantic_model = "pydantic_markdown.cli:main"
+pydantic_markdown = "pydantic_markdown.writer:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
