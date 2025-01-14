@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Literal, Mapping, Optional, Set, Tuple, Type
 
 from pydantic import AnyUrl, BaseModel, Field
-from pytest import warns
+from pytest import raises, warns
 
 from pydantic_markdown.steps import ClassDocstringMissingWarning, FieldDescriptionMissingWarning
 from pydantic_markdown.writer import Configuration, _document_model, _import_class
@@ -69,6 +69,16 @@ class ModelMissingEnumDocstring(BaseModel):
 def test_import_class():
     hopefully_path_class = _import_class(_get_id(Path))
     assert hopefully_path_class is Path
+
+
+def test_import_non_existing_module():
+    with raises(ImportError):
+        _import_class("NonExistingModule.Class")
+
+
+def test_import_non_existing_class():
+    with raises(ImportError):
+        _import_class("pydantic_markdown.NonExistingClass")
 
 
 def test_missing_enum_docstring(output_dir):
