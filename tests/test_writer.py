@@ -5,10 +5,10 @@ from subprocess import PIPE, run
 from typing import Dict, List, Literal, Mapping, Optional, Set, Tuple, Type
 
 from pydantic import AnyUrl, BaseModel, Field
-from pytest import raises, warns
+from pytest import fixture, raises, warns
 
 from pydantic_markdown.steps import ClassDocstringMissingWarning, FieldDescriptionMissingWarning
-from pydantic_markdown.writer import Configuration, _document_model, _import_class
+from pydantic_markdown.writer import Configuration, _import_class, document_model
 
 
 class IntEnumeration(Enum):
@@ -67,6 +67,12 @@ class ModelMissingEnumDocstring(BaseModel):
     enum: EnumMissingDocstring = Field(description="Enumeration which is not documented")
 
 
+@fixture
+def output_io(output_dir):
+    with open(output_dir / "models.md", "at", encoding="utf-8") as file:
+        yield file
+
+
 def test_import_class():
     hopefully_path_class = _import_class(_get_id(Path))
     assert hopefully_path_class is Path
@@ -82,42 +88,28 @@ def test_import_non_existing_class():
         _import_class("pydantic_markdown.NonExistingClass")
 
 
-def test_missing_enum_docstring(output_dir):
-    config = Configuration(model=_get_id(ModelMissingEnumDocstring), output=output_dir)
+def test_missing_enum_docstring(output_io):
     with warns(ClassDocstringMissingWarning):
-        _document_model(config)
+        document_model(output_io, ModelMissingEnumDocstring)
 
 
-def test_missing_field_description(output_dir):
-    config = Configuration(model=_get_id(ModelWithUndescribedMembers), output=output_dir)
+def test_missing_field_description(output_io):
     with warns(FieldDescriptionMissingWarning):
-        _document_model(config)
+        document_model(output_io, ModelWithUndescribedMembers)
 
 
-def test_document_model(output_dir):
-    config = Configuration(
-        model=_get_id(CompleteClass),
-        output=output_dir / "models.md",
-    )
-    _document_model(config)
+def test_document_model(output_io):
+    document_model(output_io, CompleteClass)
 
 
-def test_incomplete_model_raises(output_dir):
-    config = Configuration(
-        model=_get_id(ModelWithoutDocstring),
-        output=output_dir,
-    )
+def test_incomplete_model_raises(output_io):
     with warns(ClassDocstringMissingWarning):
-        _document_model(config)
+        document_model(output_io, ModelWithoutDocstring)
 
 
-def test_incomplete_model_without_strict(output_dir):
-    config = Configuration(
-        model=_get_id(ModelWithoutDocstring),
-        output=output_dir,
-    )
+def test_incomplete_model_without_strict(output_io):
     with warns(ClassDocstringMissingWarning):
-        _document_model(config)
+        document_model(output_io, ModelWithoutDocstring)
 
 
 def test_cli(output_dir):

@@ -1,6 +1,5 @@
 from importlib import import_module
 from io import StringIO, TextIOWrapper
-from logging import getLogger
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, Set, Type, Union
@@ -13,8 +12,6 @@ from pydantic_markdown.io import MarkdownWriter
 from pydantic_markdown.steps import MissingReferenceError, Step, TypeReferenceMap, create_step
 from pydantic_markdown.tree import TypeNode
 
-_logger = getLogger(__name__)
-
 
 class Configuration(BaseSettings):
     """Configuration of the pydantic_markdown tool."""
@@ -23,9 +20,6 @@ class Configuration(BaseSettings):
     output: Path = Field(
         default=Path(".models.md"), description='Path to store the markdown file in. Defaults to "./models.md"'
     )
-
-
-class CliConfig(Configuration):
     model_config = SettingsConfigDict(cli_parse_args=True)
 
 
@@ -96,18 +90,19 @@ class Writer:
         return True
 
 
-def _document_model(config: Configuration):
+def document_model(text_io: TextIOWrapper, type_hint: Any) -> None:
+    writer = Writer(text_io, type_hint)
+    writer.write()
+
+
+def main():
+    config = Configuration()
     if config.output.is_dir():
         config.output /= "models.md"
 
     root_type = _import_class(config.model)
     with open(config.output, "wt", encoding="utf-8") as file:
-        writer = Writer(file, root_type)
-        writer.write()
-
-
-def main():
-    _document_model(CliConfig())
+        document_model(file, root_type)
 
 
 if __name__ == "__main__":

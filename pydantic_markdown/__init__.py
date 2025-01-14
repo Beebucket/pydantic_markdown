@@ -1,0 +1,1 @@
+from pydantic_markdown.writer import document_model as document_model
