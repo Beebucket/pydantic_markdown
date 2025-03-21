@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from logging import getLogger
 from pathlib import Path
@@ -28,6 +28,7 @@ PRIMITIVES = {
     float: "Floating Point Number",
     bool: "Boolean",
     Path: "File Path",
+    datetime: "ISO8601 Datetime",
     timedelta: "ISO8601 Duration",
     AnyUrl: "URL",
 }
