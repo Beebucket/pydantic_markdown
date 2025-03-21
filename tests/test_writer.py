@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from subprocess import PIPE, run
@@ -50,6 +50,7 @@ class CompleteClass(BaseModel):
     path: Path = Field(description="The path to the end of the rainbow")
     time_span: timedelta = Field(description="A duration")
     url: AnyUrl = Field(description="This should be any kind of URL")
+    date: datetime = Field(description="You can store datetimes in here")
 
 
 class ModelWithoutDocstring(BaseModel):
