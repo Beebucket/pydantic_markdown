@@ -1,3 +1,4 @@
+import types
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from enum import Enum
@@ -276,7 +277,7 @@ class UnionStep(GenericStep):
     @classmethod
     def covers(cls, type_hint):
         origin = get_origin(type_hint)
-        return (origin is Union) or (origin is Optional)
+        return (origin is Union) or (origin is Optional) or (origin is types.UnionType)
 
 
 class TupleStep(GenericStep):
