@@ -29,7 +29,9 @@ class MarkdownWriter:
         self._text_io.write("#" * (1 + level) + f" {text}\n\n")
 
     def print_description(self, description: str) -> None:
-        self._text_io.write(description.strip() + "\n\n")
+        for line in description.splitlines(keepends=False):
+            self._text_io.write(line.strip() + "\n")
+        self._text_io.write("\n")
 
     def _print_table_row(self, row: Iterable[str]) -> None:
         self._text_io.write("| " + " | ".join(row) + " |\n")
