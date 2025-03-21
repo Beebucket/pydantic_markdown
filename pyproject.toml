@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 [project]
 name = "pydantic_markdown"
@@ -29,15 +29,11 @@ dev = ["pydantic_markdown[test]"]
 [project.scripts]
 pydantic_markdown = "pydantic_markdown.writer:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["pydantic_markdown"]
+[tool.hatch.version]
+source = "vcs"
 
-[tool.setuptools.dynamic]
-version = { file = "dist/VERSION.txt" }
-
-[tool.setuptools.package-data]
-"*" = ["*.txt", "*.json", "py.typed"]
+[tool.hatch.build.hooks.vcs]
+version-file = "pydantic_markdown/_version.py"
 
 [tool.mypy]
 mypy_path = "."
