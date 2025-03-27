@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from enum import Enum
 from logging import getLogger
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import (
     Any,
     Iterator,
@@ -27,7 +27,9 @@ PRIMITIVES = {
     type(None): "None/Null",
     float: "Floating Point Number",
     bool: "Boolean",
-    Path: "File Path",
+    Path: "Local Platforms Path",
+    PurePosixPath: "Posix compatible Path",
+    PureWindowsPath: "Windows compatible Path",
     datetime: "ISO8601 Datetime",
     timedelta: "ISO8601 Duration",
     AnyUrl: "URL",
