@@ -4,7 +4,7 @@ from pathlib import Path
 from subprocess import PIPE, run
 from typing import Annotated, Dict, List, Literal, Mapping, Optional, Set, Tuple, Type
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AfterValidator, AnyUrl, BaseModel, Field
 from pytest import fixture, raises, warns
 
 from pydantic_markdown import CustomAnnotation, document_model
@@ -33,6 +33,9 @@ class StringEnumeration(str, Enum):
     Three = "Three"
 
 
+PostValidatedString = Annotated[str, AfterValidator(lambda value: value)]
+
+
 class CompleteClass(BaseModel):
     """This is my very well documented class"""
 
@@ -51,6 +54,7 @@ class CompleteClass(BaseModel):
     time_span: timedelta = Field(description="A duration")
     url: AnyUrl = Field(description="This should be any kind of URL")
     date: datetime = Field(description="You can store datetimes in here")
+    post_validated_string: PostValidatedString = Field(description="String with post validator")
 
 
 class ModelWithoutDocstring(BaseModel):
