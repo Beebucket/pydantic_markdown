@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from enum import Enum
 from logging import getLogger
-from typing import Any, Callable, Dict, Literal, Optional, Tuple, Type, Union, get_origin
+from typing import Annotated, Any, Callable, Dict, Generic, List, Literal, Optional, Type, TypeVar, Union, get_origin
 from typing import get_args as get_generic_args
 from warnings import warn
 
@@ -302,6 +302,61 @@ ReferenceGetter = Callable[[TypeReferenceMap], str]
 PrintFunction = Callable[[TypeReferenceMap, MarkdownWriter], None]
 
 
+def _get_property_from_annotations(property_name: str, annotations: List[Any]):
+    reference_getter = None
+
+    for annotation in annotations:
+        annotation_reference_getter = getattr(annotation, property_name, None)
+        if annotation_reference_getter:
+            if reference_getter:
+                raise RuntimeError(f'Multiple annotations found for "{property_name}"! Only one is valid!')
+            reference_getter = annotation_reference_getter
+
+    return reference_getter
+
+
+def _get_reference_getter(type_hint: Any, annotations: List[Any]) -> ReferenceGetter:
+    reference_getter = _get_property_from_annotations("__get_pydantic_reference__", annotations)
+    if reference_getter:
+        return reference_getter
+
+    # None was annotated. Fall back to type hint implementation
+    return create_step(type_hint).get_reference
+
+
+def _get_printer(type_hint: Any, annotations: List[Any]) -> PrintFunction:
+    printer = _get_property_from_annotations("__print_pydantic_markdown__", annotations)
+    if printer:
+        return printer
+
+    # None was annotated. Fall back to type hint implementation
+    return create_step(type_hint).print
+
+
+_AnnotatedType = TypeVar("_AnnotatedType")
+_Annotations = TypeVar("_Annotations")
+
+
+class AnnotatedStep(Generic[_AnnotatedType, _Annotations], Step):
+    def __init__(self, type_hint: Annotated[_AnnotatedType, _Annotations]):
+        super().__init__(type_hint)
+        origin: _AnnotatedType
+        origin, *annotations = get_generic_args(type_hint)
+        self._reference_getter = _get_reference_getter(origin, annotations)
+        self._printer = _get_printer(origin, annotations)
+
+    def get_reference(self, type_references):
+        return self._reference_getter(type_references)
+
+    def print(self, type_references, writer):
+        return self._printer(type_references, writer)
+
+    @classmethod
+    def covers(cls, type_hint: Any) -> bool:
+        origin = get_origin(type_hint)
+        return origin is Annotated
+
+
 class FieldInfoStep(Step):
     """This step represents how to document a pydantic FieldInfo.
 
@@ -314,7 +369,8 @@ class FieldInfoStep(Step):
         if type_hint.annotation is None:
             raise RuntimeError("Empty type annotation in type hint")
 
-        self._reference_getter, self._printer = FieldInfoStep._get_interface_functions(type_hint)
+        self._reference_getter = _get_reference_getter(type_hint.annotation, type_hint.metadata)
+        self._printer = _get_printer(type_hint.annotation, type_hint.metadata)
 
     def get_reference(self, type_references: TypeReferenceMap) -> str:
         return self._reference_getter(type_references)
@@ -326,21 +382,9 @@ class FieldInfoStep(Step):
     def covers(cls, type_hint: Any) -> bool:
         return isinstance(type_hint, FieldInfo)
 
-    @staticmethod
-    def _get_interface_functions(type_hint: FieldInfo) -> Tuple[ReferenceGetter, PrintFunction]:
-        markdown_annotations = [
-            annotation for annotation in type_hint.metadata if isinstance(annotation, CustomAnnotation)
-        ]
-        # No matching annotations, just use the underlying types implementation
-        if len(markdown_annotations) == 0:
-            inner_step = create_step(type_hint.annotation)
-            return inner_step.get_reference, inner_step.print
-        if len(markdown_annotations) != 1:
-            raise RuntimeError("Too many pydantic markdown CustomAnnotations. You must only use one per type!")
-        return markdown_annotations[0].__get_pydantic_reference__, markdown_annotations[0].__print_pydantic_markdown__
-
 
 _POSSIBLE_STEPS = (
+    AnnotatedStep,
     PrimitiveStep,
     EnumStep,
     ModelStep,
