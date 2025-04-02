@@ -7,10 +7,12 @@ from typing import Annotated, Dict, List, Literal, Mapping, Optional, Set, Tuple
 from pydantic import AfterValidator, AnyUrl, BaseModel, Field
 from pytest import fixture, raises, warns
 
-from pydantic_markdown import CustomAnnotation, document_model
+from pydantic_markdown import document_model
 from pydantic_markdown.io import MarkdownWriter
 from pydantic_markdown.steps import (
     ClassDocstringMissingWarning,
+    CustomPrinterAnnotation,
+    CustomReferenceAnnotation,
     FieldDescriptionMissingWarning,
     TypeReferenceMap,
 )
@@ -84,7 +86,7 @@ def output_io(output_dir):
         yield file
 
 
-class CustomIntAnnotation(CustomAnnotation):
+class CustomIntAnnotation(CustomPrinterAnnotation, CustomReferenceAnnotation):
     def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str:
         return "My annotated Number Type"
 

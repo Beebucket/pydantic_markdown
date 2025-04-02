@@ -36,10 +36,10 @@ For overloading the recursion function of a type, just inherit the annotation in
 annotate the type with it:
 
 ```python
-from pydantic_markdown import CustomAnnotation
+from pydantic_markdown import CustomPrinterAnnotation, CustomReferenceAnnotation
 
 
-class CustomIntAnnotation(CustomAnnotation):
+class CustomIntAnnotation(CustomPrinterAnnotation, CustomReferenceAnnotation):
     def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str:
         return "My annotated Number Type"
 
@@ -52,6 +52,23 @@ AnnotatedInt = Annotated[int, CustomIntAnnotation()]
 ```
 
 This way, the default implementation for documenting integers will be overwritten with the results from ```__get_pydantic_reference__``` and ```__print_pydantic_markdown__```.
+
+## Annotating a class directly
+
+In case you want to enable a self written class to support the markdown generation, you can just define the custom functions
+as classmethods on the class itself:
+
+```python
+class ClassWithReferenceGetterAndPrinter(str):
+    @classmethod
+    def __get_pydantic_reference__(cls, reference_map):
+        return TEST_REFERENCE
+
+    @classmethod
+    def __print_pydantic_markdown__(cls, references, writer) -> None:
+        writer.write(TEST_PRINT_BODY)
+
+```
 
 # Developer Info
 

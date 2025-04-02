@@ -3,17 +3,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from enum import Enum
 from logging import getLogger
-from typing import Annotated, Any, Callable, Dict, Generic, List, Literal, Optional, Type, TypeVar, Union, get_origin
+from typing import Annotated, Any, Callable, Generic, List, Literal, Optional, Type, TypeVar, Union, get_origin
 from typing import get_args as get_generic_args
 from warnings import warn
 
-from anytree import PreOrderIter
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from pydantic_markdown.io import MarkdownWriter, get_header_reference
-from pydantic_markdown.tree import PRIMITIVES, TypeNode
+from pydantic_markdown.tree import PRIMITIVES
 
 _logger = getLogger(__name__)
 
@@ -56,19 +55,44 @@ class TypeReferenceMap(dict):
         raise MissingReferenceError(type_hint)
 
 
-class CustomAnnotation(ABC):
-    """This is the interface for non static custom type annotations.
+class CustomReferenceAnnotation(ABC):
+    """
+    This is the interface for getting the reference to a given class.
 
-    Inherit this and implement the magic functions to create a struct that you can annotate
-    types with. That way, pydantic_markdown will be able to create markdown documentation for
-    a given type.
+    You can inherit this from either the class you want to customize or an annotation.
     """
 
     @abstractmethod
-    def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str: ...
+    def __get_pydantic_reference__(self, references: TypeReferenceMap) -> str:
+        """
+        Returns a reference to the annotated type.
+
+        Can be either a short name describing the type or a full on header of the documentation printed by the print function.
+        """
+        ...
+
+
+class CustomPrinterAnnotation(ABC):
+    """
+    This is the interface for custom type printouts in the markdown.
+
+    You can inherit this from either the class you want to customize, or an annotation.
+    """
 
     @abstractmethod
-    def __print_pydantic_markdown__(self, references: TypeReferenceMap, writer: MarkdownWriter) -> None: ...
+    def __print_pydantic_markdown__(self, references: TypeReferenceMap, writer: MarkdownWriter) -> None:
+        """
+        Prints the body of the type description.
+
+        This can do either nothing, in which case there will not be a text body dedicated to
+        further elaborate the type. Or it prints the header and body of the detailed explanation
+        of this type.
+        """
+        ...
+
+
+class CustomAnnotatedClass(CustomReferenceAnnotation, CustomPrinterAnnotation):
+    pass
 
 
 class Step(ABC):
@@ -316,7 +340,9 @@ def _get_property_from_annotations(property_name: str, annotations: List[Any]):
 
 
 def _get_reference_getter(type_hint: Any, annotations: List[Any]) -> ReferenceGetter:
-    reference_getter = _get_property_from_annotations("__get_pydantic_reference__", annotations)
+    reference_getter = _get_property_from_annotations(
+        CustomReferenceAnnotation.__get_pydantic_reference__.__name__, annotations
+    )
     if reference_getter:
         return reference_getter
 
@@ -325,7 +351,7 @@ def _get_reference_getter(type_hint: Any, annotations: List[Any]) -> ReferenceGe
 
 
 def _get_printer(type_hint: Any, annotations: List[Any]) -> PrintFunction:
-    printer = _get_property_from_annotations("__print_pydantic_markdown__", annotations)
+    printer = _get_property_from_annotations(CustomPrinterAnnotation.__print_pydantic_markdown__.__name__, annotations)
     if printer:
         return printer
 
@@ -383,8 +409,43 @@ class FieldInfoStep(Step):
         return isinstance(type_hint, FieldInfo)
 
 
+class CustomClassStep(Step):
+    """This step represents how to document a pydantic FieldInfo.
+
+    If no further metadata is present, it just forwards to the underlying annotations step implementation.
+    """
+
+    _ERROR_MESSAGE_NEED_BOTH = "When custom annotating classes for pydantic markdown, always specify the reference getter AND printer function!"
+
+    def __init__(self, type_hint: CustomAnnotatedClass):
+        reference_getter = getattr(type_hint, CustomReferenceAnnotation.__get_pydantic_reference__.__name__, None)
+        if not reference_getter:
+            raise RuntimeError(CustomClassStep._ERROR_MESSAGE_NEED_BOTH)
+        self._reference_getter = reference_getter
+
+        printer = getattr(type_hint, CustomPrinterAnnotation.__print_pydantic_markdown__.__name__, None)
+        if not printer:
+            raise RuntimeError(CustomClassStep._ERROR_MESSAGE_NEED_BOTH)
+        self._printer = printer
+
+    def get_reference(self, type_references: TypeReferenceMap) -> str:
+        return self._reference_getter(type_references)
+
+    def print(self, type_references: TypeReferenceMap, writer: MarkdownWriter) -> None:
+        self._printer(type_references, writer)
+
+    @classmethod
+    def covers(cls, type_hint: Any) -> bool:
+        has_reference_getter = (
+            getattr(type_hint, CustomReferenceAnnotation.__get_pydantic_reference__.__name__, None) is not None
+        )
+        has_printer = getattr(type_hint, CustomPrinterAnnotation.__print_pydantic_markdown__.__name__, None) is not None
+        return has_reference_getter or has_printer
+
+
 _POSSIBLE_STEPS = (
     AnnotatedStep,
+    CustomClassStep,
     PrimitiveStep,
     EnumStep,
     ModelStep,
@@ -409,14 +470,3 @@ def create_step(type_hint: Any) -> Step:
 def _get_type_hint_description(type_hint):
     name = f"{type_hint}" if isinstance(type_hint, type) else f"{type(type_hint)}: {type_hint}"
     return name
-
-
-def create_steps(type_tree: TypeNode):
-    """Creates a dictionary of steps for all types in given tree."""
-    references: Dict[Any, Step] = dict()
-    node: TypeNode
-    for node in PreOrderIter(type_tree):
-        if node.type_hint in references:
-            continue
-        references[node.type_hint] = create_step(node.type_hint)
-    return references
