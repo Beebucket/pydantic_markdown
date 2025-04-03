@@ -23,8 +23,8 @@ from pydantic.fields import FieldInfo
 PRIMITIVES = {
     str: "String",
     int: "Integer",
-    None: "None/Null",
-    type(None): "None/Null",
+    None: "null",
+    type(None): "null",
     float: "Floating Point Number",
     bool: "Boolean",
     Path: "Local Platforms Path",
