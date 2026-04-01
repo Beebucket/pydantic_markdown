@@ -17,7 +17,7 @@ from typing import (
 from warnings import warn
 
 from anytree import Node
-from pydantic import AnyUrl, BaseModel
+from pydantic import AnyUrl, AwareDatetime, BaseModel
 from pydantic.fields import FieldInfo
 
 PRIMITIVES = {
@@ -31,6 +31,7 @@ PRIMITIVES = {
     PurePosixPath: "Posix compatible Path",
     PureWindowsPath: "Windows compatible Path",
     datetime: "ISO8601 Datetime",
+    AwareDatetime: "Timezone-aware ISO8601 Datetime",
     timedelta: "ISO8601 Duration",
     AnyUrl: "URL",
 }
